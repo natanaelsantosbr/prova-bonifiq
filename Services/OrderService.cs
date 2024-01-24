@@ -1,28 +1,32 @@
 ﻿using ProvaPub.Models;
+using ProvaPub.Payments;
 
 namespace ProvaPub.Services
 {
 	public class OrderService
 	{
-		public async Task<Order> PayOrder(string paymentMethod, decimal paymentValue, int customerId)
-		{
-			if (paymentMethod == "pix")
-			{
-				//Faz pagamento...
-			}
-			else if (paymentMethod == "creditcard")
-			{
-				//Faz pagamento...
-			}
-			else if (paymentMethod == "paypal")
-			{
-				//Faz pagamento...
-			}
+        private readonly Dictionary<string, IPaymentMethod> _paymentMethods;
 
-			return await Task.FromResult( new Order()
+        public OrderService()
+        {
+			_paymentMethods = new Dictionary<string, IPaymentMethod>
 			{
-				Value = paymentValue
-			});
-		}
-	}
+				{ "pix", new PixPayment() },
+				{ "creditcard", new CreditCardPayment() },
+				{ "paypal", new PayPalPayment() }
+			};
+        }
+
+        public async Task<Order> PayOrder(string paymentMethod, decimal paymentValue, int customerId)
+        {
+            if (_paymentMethods.TryGetValue(paymentMethod.ToLower(), out var paymentMethodHandler))
+            {
+                return await paymentMethodHandler.Pay(paymentValue, customerId);
+            }
+            else
+            {
+                throw new ArgumentException("Método de pagamento não suportado.", nameof(paymentMethod));
+            }
+        }
+    }
 }
